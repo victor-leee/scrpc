@@ -29,9 +29,9 @@ type options struct {
 	maxConn  int
 }
 
-type Opt func(pool *pool)
+type PoolOpt func(pool *pool)
 
-func New(opts ...Opt) (ConnPool, error) {
+func NewPool(opts ...PoolOpt) (ConnPool, error) {
 	p := &pool{
 		opts: &options{},
 	}
@@ -156,19 +156,19 @@ func (p *pool) createTicket() {
 	}
 }
 
-func WithFactory(f func() (net.Conn, error)) Opt {
+func WithFactory(f func() (net.Conn, error)) PoolOpt {
 	return func(pool *pool) {
 		pool.opts.factory = f
 	}
 }
 
-func WithInitSize(s int) Opt {
+func WithInitSize(s int) PoolOpt {
 	return func(pool *pool) {
 		pool.opts.initConn = s
 	}
 }
 
-func WithMaxSize(s int) Opt {
+func WithMaxSize(s int) PoolOpt {
 	return func(pool *pool) {
 		pool.opts.maxConn = s
 	}
