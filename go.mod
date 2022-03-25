@@ -1,4 +1,4 @@
-module github.com/junyu-li-grad-project/earth
+module github.com/victor-leee/earth
 
 go 1.18
 
