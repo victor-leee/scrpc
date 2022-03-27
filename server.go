@@ -21,10 +21,13 @@ type serverImpl struct {
 	handlers map[string]PluginHandler
 }
 
-func (s *serverImpl) RegisterHandler(name string, h PluginHandler) {
-	if s.handlers == nil {
-		s.handlers = make(map[string]PluginHandler)
+func NewServer() Server {
+	return &serverImpl{
+		handlers: make(map[string]PluginHandler),
 	}
+}
+
+func (s *serverImpl) RegisterHandler(name string, h PluginHandler) {
 	s.handlers[name] = h
 }
 
