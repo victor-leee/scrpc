@@ -1,6 +1,6 @@
 syntax = "proto3";
-package com.github.victor_leee.earth;
-option go_package = "github.com/victor-leee/earth";
+package com.github.victor_leee.scrpc;
+option go_package = "github.com/victor-leee/scrpc";
 
 // Header is attached to every request sent to and from side car proxy
 message Header {
@@ -20,8 +20,10 @@ message Header {
   string sender_service_name = 3;
   // receiver_service_name is the service name of the receiver side (can be empty if sent to config center, unique globally)
   string receiver_service_name = 4;
+  // receiver_method_name is the method name of the receiver side
+  string receiver_method_name = 5;
   // trace_id is a globally unique id to track the request flow
-  string trace_id = 5;
+  string trace_id = 6;
   // extra is reserved for context value transfer or any other usage you'd like
   map <string, string> extra = 99999;
 }

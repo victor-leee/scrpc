@@ -1,4 +1,4 @@
-module github.com/victor-leee/earth
+module github.com/victor-leee/scrpc
 
 go 1.18
 

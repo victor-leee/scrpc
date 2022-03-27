@@ -1,4 +1,4 @@
-package earth
+package scrpc
 
 import (
 	"errors"

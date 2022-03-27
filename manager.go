@@ -1,4 +1,4 @@
-package earth
+package scrpc
 
 import (
 	"fmt"
@@ -81,15 +81,18 @@ type pooledConnManager struct {
 }
 
 var connManager Manager
+var connManagerOnce sync.Once
 
 func InitConnManager(poolFactory ConnPoolFactory) {
-	connManager = &pooledConnManager{
-		serviceID2Pool: &safeMap{
-			poolFactory: poolFactory,
-			m:           make(map[string]ConnPool),
-			mux:         sync.RWMutex{},
-		},
-	}
+	connManagerOnce.Do(func() {
+		connManager = &pooledConnManager{
+			serviceID2Pool: &safeMap{
+				poolFactory: poolFactory,
+				m:           make(map[string]ConnPool),
+				mux:         sync.RWMutex{},
+			},
+		}
+	})
 }
 
 func GlobalConnManager() Manager {

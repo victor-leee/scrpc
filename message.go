@@ -1,9 +1,9 @@
-package earth
+package scrpc
 
 import (
 	"encoding/binary"
 	"github.com/sirupsen/logrus"
-	"github.com/victor-leee/earth/github.com/victor-leee/earth"
+	"github.com/victor-leee/scrpc/github.com/victor-leee/scrpc"
 	"google.golang.org/protobuf/proto"
 	"io"
 )
@@ -11,22 +11,22 @@ import (
 // Message holds the data transferred through unix domain sock and sends them to other side-cars
 type Message struct {
 	HeaderLenBytes []byte
-	Header         *earth.Header
+	Header         *scrpc.Header
 	RawHeader      []byte
 	Body           []byte
 }
 
-func FromProtoMessage(msg proto.Message, header *earth.Header) *Message {
+func FromProtoMessage(msg proto.Message, header *scrpc.Header) *Message {
 	b, _ := proto.Marshal(msg)
 	return FromBody(b, header)
 }
 
 // FromBody builds a Message directly with information of the body bytes(build header&headerLength)
-func FromBody(body []byte, customHeader *earth.Header) *Message {
+func FromBody(body []byte, customHeader *scrpc.Header) *Message {
 	if customHeader == nil {
-		customHeader = &earth.Header{}
+		customHeader = &scrpc.Header{}
 	}
-	header := &earth.Header{
+	header := &scrpc.Header{
 		BodySize:            uint64(len(body)),
 		MessageType:         customHeader.MessageType,
 		SenderServiceName:   customHeader.SenderServiceName,
@@ -61,7 +61,7 @@ func FromReader(reader io.Reader, readFunc func(reader io.Reader, size uint64) (
 		logrus.Errorf("[FromReader] reader header bytes failed: %v", err)
 		return nil, err
 	}
-	header := &earth.Header{}
+	header := &scrpc.Header{}
 	if err = proto.Unmarshal(headerBytes, header); err != nil {
 		logrus.Errorf("[FromReader] unmarshal bytes to struct Header failed: %v", err)
 		return nil, err
