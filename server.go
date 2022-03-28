@@ -1,6 +1,7 @@
 package scrpc
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/victor-leee/scrpc/github.com/victor-leee/scrpc"
 	"google.golang.org/protobuf/proto"
 	"net"
@@ -28,6 +29,11 @@ func NewServer() Server {
 }
 
 func (s *serverImpl) RegisterHandler(name string, h PluginHandler) {
+	InitConnManager(func(cname string) (ConnPool, error) {
+		return NewPool(WithInitSize(10), WithMaxSize(50), WithFactory(func() (net.Conn, error) {
+			return net.Dial("unix", cname)
+		}))
+	})
 	s.handlers[name] = h
 }
 
@@ -36,7 +42,7 @@ func (s *serverImpl) Start() error {
 	for i := 0; i < concurrency; i++ {
 		go func() {
 			if err := s.waitMsg(); err != nil {
-				// TODO LOG HERE
+				logrus.Errorf("[Start] start message connection failed: %v", err)
 			}
 		}()
 	}
