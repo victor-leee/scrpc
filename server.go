@@ -23,17 +23,17 @@ type serverImpl struct {
 }
 
 func NewServer() Server {
+	InitConnManager(func(cname string) (ConnPool, error) {
+		return NewPool(WithInitSize(10), WithMaxSize(50), WithFactory(func() (net.Conn, error) {
+			return net.Dial("unix", cname)
+		}))
+	})
 	return &serverImpl{
 		handlers: make(map[string]PluginHandler),
 	}
 }
 
 func (s *serverImpl) RegisterHandler(name string, h PluginHandler) {
-	InitConnManager(func(cname string) (ConnPool, error) {
-		return NewPool(WithInitSize(10), WithMaxSize(50), WithFactory(func() (net.Conn, error) {
-			return net.Dial("unix", cname)
-		}))
-	})
 	s.handlers[name] = h
 }
 
