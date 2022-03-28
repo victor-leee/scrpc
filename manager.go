@@ -76,6 +76,12 @@ func (m *safeMap) get(cname string) ConnPool {
 	return nil
 }
 
+func (m *safeMap) put(cname string, pool ConnPool) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	m.m[cname] = pool
+}
+
 type pooledConnManager struct {
 	serviceID2Pool *safeMap
 }
@@ -100,13 +106,26 @@ func GlobalConnManager() Manager {
 }
 
 func (p *pooledConnManager) Put(cname string, conn net.Conn) error {
+	if p.serviceID2Pool.get(cname) == nil {
+		p.serviceID2Pool.mux.Lock()
+		if p.serviceID2Pool.get(cname) == nil {
+			pl, _ := NewGetFromPutPool()
+			p.serviceID2Pool.put(cname, pl)
+		}
+		p.serviceID2Pool.mux.Unlock()
+	}
 	return p.serviceID2Pool.get(cname).Put(conn)
 }
 
 func (p *pooledConnManager) Get(cname string) (net.Conn, error) {
 	pl := p.serviceID2Pool.get(cname)
 	if pl == nil {
-		return nil, nil
+		p.serviceID2Pool.mux.Lock()
+		if err := p.serviceID2Pool.insert(cname); err != nil {
+			return nil, err
+		}
+		pl = p.serviceID2Pool.get(cname)
+		p.serviceID2Pool.mux.Unlock()
 	}
 
 	return pl.Get()

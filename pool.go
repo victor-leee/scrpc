@@ -173,3 +173,33 @@ func WithMaxSize(s int) PoolOpt {
 		pool.opts.maxConn = s
 	}
 }
+
+const defaultPoolSize = 50
+
+type getFromPutPool struct {
+	connChan chan net.Conn
+}
+
+func NewGetFromPutPool() (ConnPool, error) {
+	return &getFromPutPool{
+		connChan: make(chan net.Conn, defaultPoolSize),
+	}, nil
+}
+
+func (g *getFromPutPool) Get() (net.Conn, error) {
+	return <-g.connChan, nil
+}
+
+func (g *getFromPutPool) Put(conn net.Conn) error {
+	g.connChan <- conn
+	return nil
+}
+
+func (g *getFromPutPool) Close() error {
+	close(g.connChan)
+	for conn := range g.connChan {
+		conn.Close()
+	}
+
+	return nil
+}
