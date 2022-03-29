@@ -43,6 +43,10 @@ func (m *safeMap) insert(cname string) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
+	if m.m[cname] != nil {
+		return nil
+	}
+
 	pl, err := m.poolFactory(cname)
 	if err != nil {
 		return err
@@ -120,12 +124,10 @@ func (p *pooledConnManager) Put(cname string, conn net.Conn) error {
 func (p *pooledConnManager) Get(cname string) (net.Conn, error) {
 	pl := p.serviceID2Pool.get(cname)
 	if pl == nil {
-		p.serviceID2Pool.mux.Lock()
 		if err := p.serviceID2Pool.insert(cname); err != nil {
 			return nil, err
 		}
 		pl = p.serviceID2Pool.get(cname)
-		p.serviceID2Pool.mux.Unlock()
 	}
 
 	return pl.Get()
