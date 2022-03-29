@@ -38,13 +38,11 @@ func (s *serverImpl) RegisterHandler(name string, h PluginHandler) {
 }
 
 func (s *serverImpl) Start() error {
-	concurrency := 50
+	concurrency := 1
 	for i := 0; i < concurrency; i++ {
-		go func() {
-			if err := s.waitMsg(); err != nil {
-				logrus.Errorf("[Start] start message connection failed: %v", err)
-			}
-		}()
+		if err := s.waitMsg(); err != nil {
+			logrus.Errorf("[Start] start message connection failed: %v", err)
+		}
 	}
 
 	return nil
