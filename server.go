@@ -1,6 +1,7 @@
 package scrpc
 
 import (
+	"errors"
 	"github.com/sirupsen/logrus"
 	"github.com/victor-leee/scrpc/github.com/victor-leee/scrpc"
 	"google.golang.org/protobuf/proto"
@@ -11,6 +12,11 @@ import (
 )
 
 type PluginHandler func(b []byte) (proto.Message, error)
+
+func ackSetUsage(_ []byte) (proto.Message, error) {
+	logrus.Info("ack success")
+	return nil, errors.New("ack success")
+}
 
 type Server interface {
 	RegisterHandler(name string, h PluginHandler)
@@ -29,7 +35,9 @@ func NewServer() Server {
 		}))
 	})
 	return &serverImpl{
-		handlers: make(map[string]PluginHandler),
+		handlers: map[string]PluginHandler{
+			"__ack_set_usage": ackSetUsage,
+		},
 	}
 }
 
@@ -65,6 +73,7 @@ func (s *serverImpl) waitMsg() error {
 			}
 			h := s.handlers[msg.Header.ReceiverMethodName]
 			resp, err := h(msg.Body)
+			// a little tricky about error handling here
 			if err != nil {
 				// TODO LOG HERE
 				continue
