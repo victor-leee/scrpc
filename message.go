@@ -31,6 +31,7 @@ func FromBody(body []byte, customHeader *scrpc.Header) *Message {
 		MessageType:         customHeader.MessageType,
 		SenderServiceName:   customHeader.SenderServiceName,
 		ReceiverServiceName: customHeader.ReceiverServiceName,
+		ReceiverMethodName:  customHeader.ReceiverMethodName,
 		TraceId:             customHeader.TraceId,
 		Extra:               customHeader.Extra,
 	}
