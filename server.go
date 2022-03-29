@@ -25,16 +25,18 @@ type Server interface {
 }
 
 type serverImpl struct {
+	cname    string
 	handlers map[string]PluginHandler
 }
 
-func NewServer() Server {
+func NewServer(serverCname string) Server {
 	InitConnManager(func(cname string) (ConnPool, error) {
 		return NewPool(WithInitSize(1), WithMaxSize(50), WithFactory(func() (net.Conn, error) {
 			return net.Dial("unix", cname)
 		}))
 	})
 	return &serverImpl{
+		cname: serverCname,
 		handlers: map[string]PluginHandler{
 			"__ack_set_usage": ackSetUsage,
 		},
@@ -60,7 +62,8 @@ func (s *serverImpl) waitMsg() error {
 	outErr := GlobalConnManager().Func("/tmp/sc.sock", func(conn net.Conn) error {
 		// the connection is used to receive requests
 		_, buildErr := FromBody([]byte{}, &scrpc.Header{
-			MessageType: scrpc.Header_SET_USAGE,
+			MessageType:       scrpc.Header_SET_USAGE,
+			SenderServiceName: s.cname,
 		}).Write(conn)
 		if buildErr != nil {
 			return buildErr
