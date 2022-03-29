@@ -24,7 +24,7 @@ type serverImpl struct {
 
 func NewServer() Server {
 	InitConnManager(func(cname string) (ConnPool, error) {
-		return NewPool(WithInitSize(10), WithMaxSize(50), WithFactory(func() (net.Conn, error) {
+		return NewPool(WithInitSize(1), WithMaxSize(50), WithFactory(func() (net.Conn, error) {
 			return net.Dial("unix", cname)
 		}))
 	})
