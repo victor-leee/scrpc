@@ -71,3 +71,28 @@ func (c *Conn) SetReadDeadline(t time.Time) error {
 func (c *Conn) SetWriteDeadline(t time.Time) error {
 	return c.NetConn.SetWriteDeadline(t)
 }
+
+type Listener struct {
+	Listener net.Listener
+	Type     string
+}
+
+func (l *Listener) Accept() (*Conn, error) {
+	netConn, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Conn{
+		NetConn: netConn,
+		Type:    l.Type,
+	}, nil
+}
+
+func (l *Listener) Close() error {
+	return l.Listener.Close()
+}
+
+func (l *Listener) Addr() net.Addr {
+	return l.Listener.Addr()
+}
