@@ -3,7 +3,6 @@ package scrpc
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"net"
 	"sync"
 )
 
@@ -19,10 +18,10 @@ const (
 type Manager interface {
 	// Put add a connection to pool with key cname
 	// recommend to call Func
-	Put(cname string, conn net.Conn) error
+	Put(cname string, conn *Conn) error
 	// Get returns a connection based on cname
 	// recommend to call Func
-	Get(cname string) (net.Conn, error)
+	Get(cname string) (*Conn, error)
 	// UpdateServerInfo manages creation or deletion of connection pool
 	// the purpose of this function is that Get and Put operations are heavily called
 	// therefore we should avoid write lock in both functions, so we implement another function to do the work
@@ -30,7 +29,7 @@ type Manager interface {
 	// Func is a wrapper to Put&Get&UpdateServerInfo
 	// it is recommended to use Func instead of handling Put/Get/UpdateServerInfo yourself unless
 	// absolutely necessary
-	Func(cname string, f func(conn net.Conn) error) error
+	Func(cname string, f func(conn *Conn) error) error
 }
 
 type safeMap struct {
@@ -113,7 +112,7 @@ func GlobalConnManager() Manager {
 	return connManager
 }
 
-func (p *pooledConnManager) Put(cname string, conn net.Conn) error {
+func (p *pooledConnManager) Put(cname string, conn *Conn) error {
 	if p.serviceID2Pool.get(cname) == nil {
 		pl, _ := NewGetFromPutPool()
 		p.serviceID2Pool.put(cname, pl)
@@ -121,7 +120,7 @@ func (p *pooledConnManager) Put(cname string, conn net.Conn) error {
 	return p.serviceID2Pool.get(cname).Put(conn)
 }
 
-func (p *pooledConnManager) Get(cname string) (net.Conn, error) {
+func (p *pooledConnManager) Get(cname string) (*Conn, error) {
 	pl := p.serviceID2Pool.get(cname)
 	if pl == nil {
 		if err := p.serviceID2Pool.insert(cname); err != nil {
@@ -144,7 +143,7 @@ func (p *pooledConnManager) UpdateServerInfo(cname string, tp UpdateType) error 
 	}
 }
 
-func (p *pooledConnManager) Func(cName string, f func(conn net.Conn) error) error {
+func (p *pooledConnManager) Func(cName string, f func(conn *Conn) error) error {
 	conn, err := p.Get(cName)
 	if err != nil {
 		logrus.Warnf("[ConnManager.Func] get connection failed: %v", err)

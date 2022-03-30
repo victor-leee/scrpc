@@ -12,19 +12,19 @@ type ConnPoolFactory func(cname string) (ConnPool, error)
 
 //go:generate mockgen -destination ../mock/conn_pool/mock.go -source ./conn_pool.go
 type ConnPool interface {
-	Get() (net.Conn, error)
-	Put(conn net.Conn) error
+	Get() (*Conn, error)
+	Put(conn *Conn) error
 	Close() error
 }
 
 type pool struct {
 	opts       *options
-	connChan   chan net.Conn
+	connChan   chan *Conn
 	ticketChan chan struct{}
 }
 
 type options struct {
-	factory  func() (net.Conn, error)
+	factory  func() (*Conn, error)
 	initConn int
 	maxConn  int
 }
@@ -45,7 +45,7 @@ func NewPool(opts ...PoolOpt) (ConnPool, error) {
 	return p, nil
 }
 
-func (p *pool) Get() (net.Conn, error) {
+func (p *pool) Get() (*Conn, error) {
 	select {
 	case conn := <-p.connChan:
 		return conn, nil
@@ -59,7 +59,7 @@ func (p *pool) Get() (net.Conn, error) {
 	}
 }
 
-func (p *pool) Put(conn net.Conn) error {
+func (p *pool) Put(conn *Conn) error {
 	// before we put back the connection to the pool, we should check its status
 	if p.isBrokenConn(conn) {
 		// for each broken connection we allow one more creation
@@ -71,7 +71,7 @@ func (p *pool) Put(conn net.Conn) error {
 	return nil
 }
 
-func (p *pool) isBrokenConn(conn net.Conn) (broken bool) {
+func (p *pool) isBrokenConn(conn *Conn) (broken bool) {
 	defer func() {
 		// set read deadline "never"
 		if err := conn.SetReadDeadline(time.Time{}); err != nil {
@@ -123,7 +123,7 @@ func (p *pool) init() error {
 		p.createTicket()
 	}
 
-	p.connChan = make(chan net.Conn, p.opts.maxConn)
+	p.connChan = make(chan *Conn, p.opts.maxConn)
 	for i := 0; i < p.opts.initConn; i++ {
 		if !p.requestTicket() {
 			return errors.New("request ticket to create connection failed")
@@ -156,7 +156,7 @@ func (p *pool) createTicket() {
 	}
 }
 
-func WithFactory(f func() (net.Conn, error)) PoolOpt {
+func WithFactory(f func() (*Conn, error)) PoolOpt {
 	return func(pool *pool) {
 		pool.opts.factory = f
 	}
@@ -177,20 +177,20 @@ func WithMaxSize(s int) PoolOpt {
 const defaultPoolSize = 50
 
 type getFromPutPool struct {
-	connChan chan net.Conn
+	connChan chan *Conn
 }
 
 func NewGetFromPutPool() (ConnPool, error) {
 	return &getFromPutPool{
-		connChan: make(chan net.Conn, defaultPoolSize),
+		connChan: make(chan *Conn, defaultPoolSize),
 	}, nil
 }
 
-func (g *getFromPutPool) Get() (net.Conn, error) {
+func (g *getFromPutPool) Get() (*Conn, error) {
 	return <-g.connChan, nil
 }
 
-func (g *getFromPutPool) Put(conn net.Conn) error {
+func (g *getFromPutPool) Put(conn *Conn) error {
 	g.connChan <- conn
 	return nil
 }

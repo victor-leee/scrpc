@@ -5,7 +5,6 @@ import (
 	"github.com/victor-leee/scrpc/github.com/victor-leee/scrpc"
 	"google.golang.org/protobuf/proto"
 	"io"
-	"net"
 )
 
 type RequestContext struct {
@@ -26,8 +25,9 @@ type clientImpl struct {
 
 func NewClient() Client {
 	InitConnManager(func(cname string) (ConnPool, error) {
-		return NewPool(WithInitSize(10), WithMaxSize(50), WithFactory(func() (net.Conn, error) {
-			return net.Dial("unix", cname)
+		localTransportCfg := GetConfig().LocalTransportConfig
+		return NewPool(WithInitSize(localTransportCfg.PoolCfg.InitSize), WithMaxSize(localTransportCfg.PoolCfg.MaxSize), WithFactory(func() (*Conn, error) {
+			return Dial(localTransportCfg.Protocol, cname, WithType(ConnTypeSideCar2Local))
 		}))
 	})
 	return &clientImpl{}
@@ -42,7 +42,7 @@ func (c *clientImpl) UnaryRPCRequest(ctx *RequestContext) error {
 		TraceId:             "todo",                  // TODO
 		Extra:               make(map[string]string), // TODO
 	})
-	outErr := GlobalConnManager().Func("/tmp/sc.sock", func(conn net.Conn) error {
+	outErr := GlobalConnManager().Func(GetConfig().LocalTransportConfig.Protocol, func(conn *Conn) error {
 		if _, writeErr := rpcReq.Write(conn); writeErr != nil {
 			return writeErr
 		}

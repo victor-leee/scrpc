@@ -5,7 +5,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/victor-leee/scrpc/github.com/victor-leee/scrpc"
 	"google.golang.org/protobuf/proto"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,9 +30,12 @@ type serverImpl struct {
 
 func NewServer(serverCname string) Server {
 	InitConnManager(func(cname string) (ConnPool, error) {
-		return NewPool(WithInitSize(1), WithMaxSize(50), WithFactory(func() (net.Conn, error) {
-			return net.Dial("unix", cname)
-		}))
+		localTransportCfg := GetConfig().LocalTransportConfig
+		return NewPool(WithInitSize(localTransportCfg.PoolCfg.InitSize),
+			WithMaxSize(localTransportCfg.PoolCfg.MaxSize),
+			WithFactory(func() (*Conn, error) {
+				return Dial(localTransportCfg.Protocol, cname)
+			}))
 	})
 	return &serverImpl{
 		cname: serverCname,
@@ -48,8 +50,7 @@ func (s *serverImpl) RegisterHandler(name string, h PluginHandler) {
 }
 
 func (s *serverImpl) Start() error {
-	concurrency := 1
-	for i := 0; i < concurrency; i++ {
+	for i := 0; i < GetConfig().LocalTransportConfig.PoolCfg.InitSize; i++ {
 		if err := s.waitMsg(); err != nil {
 			logrus.Errorf("[Start] start message connection failed: %v", err)
 		}
@@ -59,7 +60,7 @@ func (s *serverImpl) Start() error {
 }
 
 func (s *serverImpl) waitMsg() error {
-	outErr := GlobalConnManager().Func("/tmp/sc.sock", func(conn net.Conn) error {
+	outErr := GlobalConnManager().Func(GetConfig().LocalTransportConfig.Path, func(conn *Conn) error {
 		// the connection is used to receive requests
 		_, buildErr := FromBody([]byte{}, &scrpc.Header{
 			MessageType:       scrpc.Header_SET_USAGE,
