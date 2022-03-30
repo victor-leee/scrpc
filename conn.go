@@ -72,9 +72,32 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 	return c.NetConn.SetWriteDeadline(t)
 }
 
+type LisOpt func(listener *Listener)
+
+func WithListenerType(lisType string) LisOpt {
+	return func(listener *Listener) {
+		listener.Type = lisType
+	}
+}
+
 type Listener struct {
 	Listener net.Listener
 	Type     string
+}
+
+func Listen(protocol, addr string, opts ...LisOpt) (*Listener, error) {
+	netListener, err := net.Listen(protocol, addr)
+	if err != nil {
+		return nil, err
+	}
+	listener := &Listener{
+		Listener: netListener,
+	}
+	for _, opt := range opts {
+		opt(listener)
+	}
+
+	return listener, nil
 }
 
 func (l *Listener) Accept() (*Conn, error) {
