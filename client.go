@@ -42,7 +42,7 @@ func (c *clientImpl) UnaryRPCRequest(ctx *RequestContext) error {
 		TraceId:             "todo",                  // TODO
 		Extra:               make(map[string]string), // TODO
 	})
-	outErr := GlobalConnManager().Func(GetConfig().LocalTransportConfig.Protocol, func(conn *Conn) error {
+	outErr := GlobalConnManager().Func(GetConfig().LocalTransportConfig.Path, func(conn *Conn) error {
 		if _, writeErr := rpcReq.Write(conn); writeErr != nil {
 			return writeErr
 		}
