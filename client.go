@@ -10,6 +10,7 @@ import (
 type RequestContext struct {
 	Ctx           context.Context
 	Req           proto.Message
+	MessageType   *scrpc.Header_RPCMessageType
 	ReqService    string
 	ReqMethod     string
 	SenderService string
@@ -34,11 +35,14 @@ func NewClient() Client {
 }
 
 func (c *clientImpl) UnaryRPCRequest(ctx *RequestContext) error {
+	if ctx.MessageType == nil {
+		ctx.MessageType = scrpc.Header_SIDE_CAR_PROXY.Enum()
+	}
 	rpcReq := FromProtoMessage(ctx.Req, &scrpc.Header{
 		ReceiverServiceName: ctx.ReqService,
 		ReceiverMethodName:  ctx.ReqMethod,
 		SenderServiceName:   ctx.SenderService,
-		MessageType:         scrpc.Header_SIDE_CAR_PROXY,
+		MessageType:         *ctx.MessageType,
 		TraceId:             "todo",                  // TODO
 		Extra:               make(map[string]string), // TODO
 	})
