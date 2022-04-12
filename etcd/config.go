@@ -2,10 +2,10 @@ package etcd
 
 import (
 	"context"
+	"errors"
 	config_backend "github.com/victor-leee/scrpc/github.com/victor-leee/config-backend"
 	"gopkg.in/yaml.v2"
 	"os"
-	"sync"
 )
 
 type ServiceConfig interface {
@@ -18,10 +18,8 @@ type defaultImpl struct {
 }
 
 func (d *defaultImpl) Get(ctx context.Context, key string) (*config_backend.GetConfigResponse, error) {
-	if d.rpcCfg == nil {
-		if err := initServiceConfig(".scrpc.yml"); err != nil {
-			return nil, err
-		}
+	if d.rpcCfg == nil || d.configService == nil {
+		return nil, errors.New("empty rpcCfg or config service")
 	}
 	getCfgReq := &config_backend.GetConfigRequest{
 		ServiceId:  d.rpcCfg.Service,
@@ -38,27 +36,23 @@ type rpcConfig struct {
 }
 
 var serviceConfig ServiceConfig
-var serviceConfigInitOnce sync.Once
 
-func initServiceConfig(scrpcFile string) error {
+func init() {
+	scrpcFile := ".scrpc.yml"
 	var err error
-	serviceConfigInitOnce.Do(func() {
-		var file *os.File
-		file, err = os.Open(scrpcFile)
-		if err != nil {
-			return
-		}
-		var cfg *rpcConfig
-		if err = yaml.NewDecoder(file).Decode(&cfg); err != nil {
-			return
-		}
-		serviceConfig = &defaultImpl{
-			rpcCfg:        cfg,
-			configService: &config_backend.ConfigBackendServiceImpl{},
-		}
-	})
-
-	return err
+	var file *os.File
+	file, err = os.Open(scrpcFile)
+	if err != nil {
+		return
+	}
+	var cfg *rpcConfig
+	if err = yaml.NewDecoder(file).Decode(&cfg); err != nil {
+		return
+	}
+	serviceConfig = &defaultImpl{
+		rpcCfg:        cfg,
+		configService: &config_backend.ConfigBackendServiceImpl{},
+	}
 }
 
 func GetConfigClient() ServiceConfig {

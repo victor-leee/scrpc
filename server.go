@@ -50,6 +50,7 @@ func (s *serverImpl) RegisterHandler(name string, h PluginHandler) {
 }
 
 func (s *serverImpl) Start() error {
+	// TODO use heartbeat mechanisms to detect side-car readiness
 	for i := 0; i < GetConfig().LocalTransportConfig.PoolCfg.InitSize; i++ {
 		if err := s.waitMsg(); err != nil {
 			logrus.Errorf("[Start] start message connection failed: %v", err)
