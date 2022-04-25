@@ -14,6 +14,9 @@ message Header {
     SIDE_CAR_PROXY = 1;
     // SET_USAGE is bonded with InitConnectionReq to classify the connection usage between apps and side-cars
     SET_USAGE = 2;
+    // THROTTLED indicates the previous request is rejected due to throttling mechanisms
+    // Note that there are two scenarios where THROTTLED is returned, including sender side throttling and receiver side throttling
+    THROTTLED = 3;
   }
   RPCMessageType message_type = 2;
   // sender_service_name is the service name of the sender (configured in fe, unique globally)
