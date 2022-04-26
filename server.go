@@ -24,24 +24,25 @@ type Server interface {
 }
 
 type serverImpl struct {
-	cname    string
-	handlers map[string]PluginHandler
+	cname       string
+	handlers    map[string]PluginHandler
+	connManager Manager
 }
 
 func NewServer(serverCname string) Server {
-	InitConnManager(func(cname string) (ConnPool, error) {
-		localTransportCfg := GetConfig().LocalTransportConfig
-		return NewPool(WithInitSize(localTransportCfg.PoolCfg.InitSize),
-			WithMaxSize(localTransportCfg.PoolCfg.MaxSize),
-			WithFactory(func() (*Conn, error) {
-				return Dial(localTransportCfg.Protocol, cname)
-			}))
-	})
 	return &serverImpl{
 		cname: serverCname,
 		handlers: map[string]PluginHandler{
 			"__ack_set_usage": ackSetUsage,
 		},
+		connManager: InitConnManager(func(cname string) (ConnPool, error) {
+			localTransportCfg := GetConfig().LocalTransportConfig
+			return NewPool(WithInitSize(localTransportCfg.PoolCfg.InitSize),
+				WithMaxSize(localTransportCfg.PoolCfg.MaxSize),
+				WithFactory(func() (*Conn, error) {
+					return Dial(localTransportCfg.Protocol, cname)
+				}))
+		}),
 	}
 }
 
@@ -61,7 +62,7 @@ func (s *serverImpl) Start() error {
 }
 
 func (s *serverImpl) waitMsg() error {
-	outErr := GlobalConnManager().Func(GetConfig().LocalTransportConfig.Path, func(conn *Conn) error {
+	outErr := s.connManager.Func(GetConfig().LocalTransportConfig.Path, func(conn *Conn) error {
 		// the connection is used to receive requests
 		_, buildErr := FromBody([]byte{}, &scrpc.Header{
 			MessageType:       scrpc.Header_SET_USAGE,

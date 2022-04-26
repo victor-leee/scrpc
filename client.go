@@ -22,16 +22,18 @@ type Client interface {
 }
 
 type clientImpl struct {
+	connManager Manager
 }
 
 func NewClient() Client {
-	InitConnManager(func(cname string) (ConnPool, error) {
-		localTransportCfg := GetConfig().LocalTransportConfig
-		return NewPool(WithInitSize(localTransportCfg.PoolCfg.InitSize), WithMaxSize(localTransportCfg.PoolCfg.MaxSize), WithFactory(func() (*Conn, error) {
-			return Dial(localTransportCfg.Protocol, cname, WithType(ConnTypeSideCar2Local))
-		}))
-	})
-	return &clientImpl{}
+	return &clientImpl{
+		connManager: InitConnManager(func(cname string) (ConnPool, error) {
+			localTransportCfg := GetConfig().LocalTransportConfig
+			return NewPool(WithInitSize(localTransportCfg.PoolCfg.InitSize), WithMaxSize(localTransportCfg.PoolCfg.MaxSize), WithFactory(func() (*Conn, error) {
+				return Dial(localTransportCfg.Protocol, cname, WithType(ConnTypeSideCar2Local))
+			}))
+		}),
+	}
 }
 
 func (c *clientImpl) UnaryRPCRequest(ctx *RequestContext) error {
@@ -46,7 +48,7 @@ func (c *clientImpl) UnaryRPCRequest(ctx *RequestContext) error {
 		TraceId:             "todo",                  // TODO
 		Extra:               make(map[string]string), // TODO
 	})
-	outErr := GlobalConnManager().Func(GetConfig().LocalTransportConfig.Path, func(conn *Conn) error {
+	outErr := c.connManager.Func(GetConfig().LocalTransportConfig.Path, func(conn *Conn) error {
 		if _, writeErr := rpcReq.Write(conn); writeErr != nil {
 			return writeErr
 		}
@@ -56,6 +58,9 @@ func (c *clientImpl) UnaryRPCRequest(ctx *RequestContext) error {
 		}
 		if unmarshalErr := proto.Unmarshal(resp.Body, ctx.Resp); unmarshalErr != nil {
 			return unmarshalErr
+		}
+		if resp.Header != nil && resp.Header.MessageType == scrpc.Header_THROTTLED {
+			return ErrThrottled
 		}
 
 		return nil

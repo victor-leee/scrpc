@@ -93,23 +93,14 @@ type pooledConnManager struct {
 	serviceID2Pool *safeMap
 }
 
-var connManager Manager
-var connManagerOnce sync.Once
-
-func InitConnManager(poolFactory ConnPoolFactory) {
-	connManagerOnce.Do(func() {
-		connManager = &pooledConnManager{
-			serviceID2Pool: &safeMap{
-				poolFactory: poolFactory,
-				m:           make(map[string]ConnPool),
-				mux:         sync.RWMutex{},
-			},
-		}
-	})
-}
-
-func GlobalConnManager() Manager {
-	return connManager
+func InitConnManager(poolFactory ConnPoolFactory) Manager {
+	return &pooledConnManager{
+		serviceID2Pool: &safeMap{
+			poolFactory: poolFactory,
+			m:           make(map[string]ConnPool),
+			mux:         sync.RWMutex{},
+		},
+	}
 }
 
 func (p *pooledConnManager) Put(cname string, conn *Conn) error {
